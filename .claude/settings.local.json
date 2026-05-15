@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git rebase *)",
+      "Bash(git fetch *)",
+      "Bash(git config *)",
+      "Bash(gh auth *)",
+      "Bash(git checkout *)",
+      "Bash(git reset *)",
+      "Bash(git branch *)",
+      "Bash(venv/bin/pip install *)",
+      "Bash(npm run *)"
+    ]
+  }
+}

@@ -6,11 +6,24 @@ import { notFound } from 'next/navigation'
 
 export const revalidate = 3600
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractField(val: any, field: string): string | null {
+  if (!val) return null
+  if (Array.isArray(val)) return val[0]?.[field] ?? null
+  if (typeof val === 'object') return val[field] ?? null
+  return null
+}
+
 export default async function ArticlePage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id)
   if (isNaN(id)) notFound()
 
-  const [{ data: article }, { data: cats }, { data: keywords }, { data: similar }] = await Promise.all([
+  const [
+    { data: article, error: articleError },
+    { data: cats, error: catsError },
+    { data: keywords, error: kwError },
+    { data: similar, error: similarError },
+  ] = await Promise.all([
     supabase.from('articles').select('*, issues(title, pdf_url)').eq('id', id).single(),
     supabase.from('article_categories').select('categories(name)').eq('article_id', id),
     supabase.from('article_keywords').select('keywords(word)').eq('article_id', id),
@@ -21,23 +34,20 @@ export default async function ArticlePage({ params }: { params: { id: string } }
       .limit(8),
   ])
 
+  if (process.env.NODE_ENV !== 'production' || articleError || catsError || kwError || similarError) {
+    console.log('[article page] id:', id)
+    console.log('[article page] articleError:', articleError)
+    console.log('[article page] catsError:', catsError, 'cats sample:', JSON.stringify(cats?.[0]))
+    console.log('[article page] kwError:', kwError, 'kw sample:', JSON.stringify(keywords?.[0]))
+    console.log('[article page] similarError:', similarError)
+  }
+
   if (!article) notFound()
 
-  const categoryNames = (cats || [])
-    .map((c: { categories: { name: string } | { name: string }[] | null }) => {
-      const cat = c.categories
-      if (!cat) return null
-      return Array.isArray(cat) ? cat[0]?.name : cat.name
-    })
-    .filter((n): n is string => n != null)
-
-  const keywordList = (keywords || [])
-    .map((k: { keywords: { word: string } | { word: string }[] | null }) => {
-      const kw = k.keywords
-      if (!kw) return null
-      return Array.isArray(kw) ? kw[0]?.word : kw.word
-    })
-    .filter((w): w is string => w != null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const categoryNames = (cats || []).map((c: any) => extractField(c.categories, 'name')).filter(Boolean) as string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const keywordList = (keywords || []).map((k: any) => extractField(k.keywords, 'word')).filter(Boolean) as string[]
 
   const isAd = article.article_type === 'anzeige' || article.content_type === 'anzeige'
 

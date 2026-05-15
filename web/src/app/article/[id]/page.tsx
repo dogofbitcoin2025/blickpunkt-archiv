@@ -1,10 +1,11 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import ContentTypeBadge from '@/components/ContentTypeBadge'
 import DetectionPanel from '@/components/DetectionPanel'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
-
-export const revalidate = 3600
+import { useParams } from 'next/navigation'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractField(val: any, field: string): string | null {
@@ -14,42 +15,77 @@ function extractField(val: any, field: string): string | null {
   return null
 }
 
-export default async function ArticlePage({ params }: { params: { id: string } }) {
-  const id = parseInt(params.id)
-  if (isNaN(id)) notFound()
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ArticleData = Record<string, any>
 
-  const [
-    { data: article, error: articleError },
-    { data: cats, error: catsError },
-    { data: keywords, error: kwError },
-    { data: similar, error: similarError },
-  ] = await Promise.all([
-    supabase.from('articles').select('*, issues(title, pdf_url)').eq('id', id).single(),
-    supabase.from('article_categories').select('categories(name)').eq('article_id', id),
-    supabase.from('article_keywords').select('keywords(word)').eq('article_id', id),
-    supabase.from('similar_articles')
-      .select('similar_article_id, similarity_score, shared_keywords, articles!similar_article_id(title, gemeinde, saison, jahr)')
-      .eq('article_id', id)
-      .order('similarity_score', { ascending: false })
-      .limit(8),
-  ])
+export default function ArticlePage() {
+  const params = useParams()
+  const id = parseInt(params.id as string)
 
-  if (process.env.NODE_ENV !== 'production' || articleError || catsError || kwError || similarError) {
-    console.log('[article page] id:', id)
-    console.log('[article page] articleError:', articleError)
-    console.log('[article page] catsError:', catsError, 'cats sample:', JSON.stringify(cats?.[0]))
-    console.log('[article page] kwError:', kwError, 'kw sample:', JSON.stringify(keywords?.[0]))
-    console.log('[article page] similarError:', similarError)
+  const [article, setArticle] = useState<ArticleData | null>(null)
+  const [categoryNames, setCategoryNames] = useState<string[]>([])
+  const [keywordList, setKeywordList] = useState<string[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [similar, setSimilar] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    if (isNaN(id)) { setNotFound(true); setLoading(false); return }
+
+    async function load() {
+      const [
+        { data: art, error: artErr },
+        { data: cats },
+        { data: keywords },
+        { data: sim },
+      ] = await Promise.all([
+        supabase.from('articles').select('*, issues(title, pdf_url)').eq('id', id).single(),
+        supabase.from('article_categories').select('categories(name)').eq('article_id', id),
+        supabase.from('article_keywords').select('keywords(word)').eq('article_id', id),
+        supabase.from('similar_articles')
+          .select('similar_article_id, similarity_score, shared_keywords, articles!similar_article_id(title, gemeinde, saison, jahr)')
+          .eq('article_id', id)
+          .order('similarity_score', { ascending: false })
+          .limit(8),
+      ])
+
+      if (artErr || !art) { setNotFound(true); setLoading(false); return }
+
+      setArticle(art)
+      setCategoryNames(
+        (cats || []).map((c: ArticleData) => extractField(c.categories, 'name')).filter(Boolean) as string[]
+      )
+      setKeywordList(
+        (keywords || []).map((k: ArticleData) => extractField(k.keywords, 'word')).filter(Boolean) as string[]
+      )
+      setSimilar(sim || [])
+      setLoading(false)
+    }
+
+    load()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+        Artikel wird geladen…
+      </div>
+    )
   }
 
-  if (!article) notFound()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const categoryNames = (cats || []).map((c: any) => extractField(c.categories, 'name')).filter(Boolean) as string[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const keywordList = (keywords || []).map((k: any) => extractField(k.keywords, 'word')).filter(Boolean) as string[]
+  if (notFound || !article) {
+    return (
+      <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
+        <Link href="/" className="detail-back">← Zurück zur Suche</Link>
+        <h2 style={{ marginTop: '1.5rem' }}>Artikel nicht gefunden</h2>
+        <p style={{ color: 'var(--text-muted)' }}>Der gesuchte Artikel existiert nicht.</p>
+      </div>
+    )
+  }
 
   const isAd = article.article_type === 'anzeige' || article.content_type === 'anzeige'
+  const issues = Array.isArray(article.issues) ? article.issues[0] : article.issues
 
   return (
     <article className="article-detail">
@@ -83,8 +119,8 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         <div className="detail-section">
           <h3>Kategorien & Schlagwörter</h3>
           <div className="card-tags" style={{ gap: '0.5rem' }}>
-            {categoryNames.map((c: string) => <span key={c} className="badge badge-cat">{c}</span>)}
-            {keywordList.map((k: string) => (
+            {categoryNames.map((c) => <span key={c} className="badge badge-cat">{c}</span>)}
+            {keywordList.map((k) => (
               <span key={k} style={{ fontSize: '0.78rem', background: '#f0ece6', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#5a4a3a' }}>{k}</span>
             ))}
           </div>
@@ -109,44 +145,37 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {(article as { issues?: { title?: string; pdf_url?: string } }).issues?.pdf_url && (
+      {issues?.pdf_url && (
         <div className="detail-section">
           <h3>Ausgabe</h3>
           <p style={{ fontSize: '0.88rem' }}>
-            {(article as { issues?: { title?: string; pdf_url?: string } }).issues?.title && (
-              <strong>{(article as { issues?: { title?: string; pdf_url?: string } }).issues?.title} – </strong>
-            )}
-            <a href={(article as { issues?: { title?: string; pdf_url?: string } }).issues?.pdf_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+            {issues.title && <strong>{issues.title} – </strong>}
+            <a href={issues.pdf_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
               PDF öffnen
             </a>
           </p>
         </div>
       )}
 
-      {similar && similar.length > 0 && (
+      {similar.length > 0 && (
         <div className="detail-section">
           <h3>Ähnliche Artikel ({similar.length})</h3>
           <div className="similar-list">
-            {similar.map((s: {
-              similar_article_id: number
-              similarity_score: number
-              shared_keywords: string
-              articles: { title?: string; gemeinde?: string; saison?: string; jahr?: number }[] | null
-            }) => {
+            {similar.map((s) => {
               const a = Array.isArray(s.articles) ? s.articles[0] : s.articles
               return (
-              <Link key={s.similar_article_id} href={`/article/${s.similar_article_id}`} className="similar-card">
-                <div>
-                  <div className="similar-title">{a?.title || '(Kein Titel)'}</div>
-                  <div className="similar-meta">
-                    {a?.gemeinde} · {a?.saison} {a?.jahr}
-                    {s.shared_keywords && <span> · {s.shared_keywords}</span>}
+                <Link key={s.similar_article_id} href={`/article/${s.similar_article_id}`} className="similar-card">
+                  <div>
+                    <div className="similar-title">{a?.title || '(Kein Titel)'}</div>
+                    <div className="similar-meta">
+                      {a?.gemeinde} · {a?.saison} {a?.jahr}
+                      {s.shared_keywords && <span> · {s.shared_keywords}</span>}
+                    </div>
                   </div>
-                </div>
-                <span className="similar-score">{Math.round((s.similarity_score || 0) * 100)}%</span>
-              </Link>
-            )})}
-
+                  <span className="similar-score">{Math.round((s.similarity_score || 0) * 100)}%</span>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}

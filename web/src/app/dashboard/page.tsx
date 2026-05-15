@@ -7,25 +7,50 @@ async function getStats() {
     { count: totalArticles },
     { count: totalIssues },
     { count: unreviewed },
-    { data: byGemeinde },
-    { data: byYear },
+    { data: issues },
     { data: byCategory },
     { data: recentIssues },
   ] = await Promise.all([
     supabase.from('articles').select('*', { count: 'exact', head: true }),
     supabase.from('issues').select('*', { count: 'exact', head: true }),
     supabase.from('articles').select('*', { count: 'exact', head: true }).eq('status', 'automatisch'),
-    supabase.from('articles').select('gemeinde').not('gemeinde', 'is', null),
-    supabase.from('articles').select('jahr').not('jahr', 'is', null),
-    supabase.from('article_categories').select('category_id, categories(name)'),
-    supabase.from('issues').select('id, title, gemeinde, saison, jahr, status, created_at').order('created_at', { ascending: false }).limit(5),
+    // Issues are small (138 rows) – use them for gemeinde/jahr stats to avoid
+    // the 1000-row default limit when scanning all 19k+ articles
+    supabase.from('issues').select('id, gemeinde, jahr, saison').limit(500),
+    supabase.from('article_categories').select('category_id, categories(name)').limit(5000),
+    supabase.from('issues')
+      .select('id, title, gemeinde, saison, jahr, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
+
+  // Count articles per issue via batched counts
+  const issueList = issues || []
+  const articleCountPerIssue: Record<number, number> = {}
+
+  // Fetch article counts in 5 parallel batches to avoid N+1 queries
+  const batchSize = 30
+  for (let i = 0; i < issueList.length; i += batchSize) {
+    const batch = issueList.slice(i, i + batchSize)
+    const batchIds = batch.map(iss => iss.id)
+    // Fetch issue_id for articles in this batch
+    const { data: arts } = await supabase
+      .from('articles')
+      .select('issue_id')
+      .in('issue_id', batchIds)
+      .limit(10000)
+    for (const a of arts || []) {
+      articleCountPerIssue[a.issue_id] = (articleCountPerIssue[a.issue_id] || 0) + 1
+    }
+  }
 
   // Group by gemeinde
   const gemeindeMap: Record<string, number> = {}
-  for (const r of byGemeinde || []) {
-    const g = (r as { gemeinde: string }).gemeinde
-    gemeindeMap[g] = (gemeindeMap[g] || 0) + 1
+  for (const iss of issueList) {
+    const g = iss.gemeinde
+    if (!g) continue
+    const cnt = articleCountPerIssue[iss.id] || 0
+    gemeindeMap[g] = (gemeindeMap[g] || 0) + cnt
   }
   const gemeindeStats = Object.entries(gemeindeMap)
     .map(([name, count]) => ({ name, count }))
@@ -33,9 +58,11 @@ async function getStats() {
 
   // Group by year
   const yearMap: Record<number, number> = {}
-  for (const r of byYear || []) {
-    const y = (r as { jahr: number }).jahr
-    yearMap[y] = (yearMap[y] || 0) + 1
+  for (const iss of issueList) {
+    const y = iss.jahr
+    if (!y) continue
+    const cnt = articleCountPerIssue[iss.id] || 0
+    yearMap[y] = (yearMap[y] || 0) + cnt
   }
   const yearStats = Object.entries(yearMap)
     .map(([year, count]) => ({ year: parseInt(year), count }))
@@ -45,8 +72,9 @@ async function getStats() {
   // Group by category
   const catMap: Record<string, number> = {}
   for (const r of byCategory || []) {
-    const cats = (r as { categories: { name: string }[] | null }).categories
-    const name = Array.isArray(cats) ? cats[0]?.name : (cats as { name: string } | null)?.name
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cats = (r as any).categories
+    const name = Array.isArray(cats) ? cats[0]?.name : cats?.name
     if (name) catMap[name] = (catMap[name] || 0) + 1
   }
   const catStats = Object.entries(catMap)

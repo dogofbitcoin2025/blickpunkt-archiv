@@ -23,8 +23,12 @@ export default async function ArticlePage({ params }: { params: { id: string } }
 
   if (!article) notFound()
 
-  const categoryNames = (cats || []).map((c: { categories: { name: string } | null }) => c.categories?.name).filter(Boolean)
-  const keywordList = (keywords || []).map((k: { keywords: { word: string } | null }) => k.keywords?.word).filter(Boolean)
+  const categoryNames = (cats || []).flatMap((c: { categories: { name: string }[] | null }) =>
+    (c.categories ?? []).map(cat => cat.name)
+  )
+  const keywordList = (keywords || []).flatMap((k: { keywords: { word: string }[] | null }) =>
+    (k.keywords ?? []).map(kw => kw.word)
+  )
 
   const isAd = article.article_type === 'anzeige' || article.content_type === 'anzeige'
 
@@ -108,19 +112,22 @@ export default async function ArticlePage({ params }: { params: { id: string } }
               similar_article_id: number
               similarity_score: number
               shared_keywords: string
-              articles: { title?: string; gemeinde?: string; saison?: string; jahr?: number } | null
-            }) => (
+              articles: { title?: string; gemeinde?: string; saison?: string; jahr?: number }[] | null
+            }) => {
+              const a = Array.isArray(s.articles) ? s.articles[0] : s.articles
+              return (
               <Link key={s.similar_article_id} href={`/article/${s.similar_article_id}`} className="similar-card">
                 <div>
-                  <div className="similar-title">{s.articles?.title || '(Kein Titel)'}</div>
+                  <div className="similar-title">{a?.title || '(Kein Titel)'}</div>
                   <div className="similar-meta">
-                    {s.articles?.gemeinde} · {s.articles?.saison} {s.articles?.jahr}
+                    {a?.gemeinde} · {a?.saison} {a?.jahr}
                     {s.shared_keywords && <span> · {s.shared_keywords}</span>}
                   </div>
                 </div>
                 <span className="similar-score">{Math.round((s.similarity_score || 0) * 100)}%</span>
               </Link>
-            ))}
+            )})}
+
           </div>
         </div>
       )}

@@ -45,7 +45,8 @@ async function getStats() {
   // Group by category
   const catMap: Record<string, number> = {}
   for (const r of byCategory || []) {
-    const name = (r as { categories: { name: string } | null }).categories?.name
+    const cats = (r as { categories: { name: string }[] | null }).categories
+    const name = Array.isArray(cats) ? cats[0]?.name : (cats as { name: string } | null)?.name
     if (name) catMap[name] = (catMap[name] || 0) + 1
   }
   const catStats = Object.entries(catMap)

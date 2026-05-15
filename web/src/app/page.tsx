@@ -26,7 +26,7 @@ export default function SearchPage() {
       .then(({ data }) => setCategories(data || []))
     supabase.from('articles').select('jahr').not('jahr', 'is', null)
       .then(({ data }) => {
-        const unique = [...new Set((data || []).map((r: { jahr: number }) => r.jahr))].sort((a, b) => b - a)
+        const unique = Array.from(new Set((data || []).map((r: { jahr: number }) => r.jahr))).sort((a, b) => b - a)
         setYears(unique)
       })
   }, [])

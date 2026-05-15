@@ -23,12 +23,21 @@ export default async function ArticlePage({ params }: { params: { id: string } }
 
   if (!article) notFound()
 
-  const categoryNames = (cats || []).flatMap((c: { categories: { name: string }[] | null }) =>
-    (c.categories ?? []).map(cat => cat.name)
-  )
-  const keywordList = (keywords || []).flatMap((k: { keywords: { word: string }[] | null }) =>
-    (k.keywords ?? []).map(kw => kw.word)
-  )
+  const categoryNames = (cats || [])
+    .map((c: { categories: { name: string } | { name: string }[] | null }) => {
+      const cat = c.categories
+      if (!cat) return null
+      return Array.isArray(cat) ? cat[0]?.name : cat.name
+    })
+    .filter((n): n is string => n != null)
+
+  const keywordList = (keywords || [])
+    .map((k: { keywords: { word: string } | { word: string }[] | null }) => {
+      const kw = k.keywords
+      if (!kw) return null
+      return Array.isArray(kw) ? kw[0]?.word : kw.word
+    })
+    .filter((w): w is string => w != null)
 
   const isAd = article.article_type === 'anzeige' || article.content_type === 'anzeige'
 

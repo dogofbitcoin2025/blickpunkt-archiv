@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin – BlickPUNKT Archiv</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⚙️</text></svg>">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/" class="logo">
+                Blick<span class="accent">PUNKT</span>
+                <span class="logo-sub">Redaktions-Archiv</span>
+            </a>
+            <button class="mobile-menu-btn" aria-label="Menü">☰</button>
+            <nav>
+                <a href="/">Suche</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/admin" class="active">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-wrap" id="admin-content">
+        <h1 class="page-title">Verwaltung</h1>
+        <p class="page-subtitle">Ausgaben scannen, PDFs verarbeiten, Artikel prüfen und korrigieren.</p>
+
+        <!-- Actions -->
+        <div class="admin-actions">
+            <button id="btn-scan" class="btn btn-primary">🔄 Webseite scannen</button>
+            <button id="btn-process-all" class="btn btn-secondary">⚙️ Alle verarbeiten</button>
+            <button id="btn-similarity" class="btn btn-secondary">🔗 Ähnlichkeiten berechnen</button>
+        </div>
+
+        <!-- Upload -->
+        <div class="admin-section">
+            <div class="card">
+                <div class="card-title">PDF manuell hochladen</div>
+                <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin:1rem 0">
+                    <div class="form-group" style="margin:0;flex:1;min-width:140px">
+                        <label class="form-label">Gemeinde</label>
+                        <select id="upload-gemeinde" class="form-select">
+                            <option value="">– wählen –</option>
+                            <option>Westoverledingen</option>
+                            <option>Rhauderfehn / Ostrhauderfehn</option>
+                            <option>Saterland</option>
+                            <option>Barßel</option>
+                            <option>Apen / Augustfehn</option>
+                            <option>Stadt Leer</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;flex:1;min-width:120px">
+                        <label class="form-label">Saison</label>
+                        <select id="upload-saison" class="form-select">
+                            <option value="">– wählen –</option>
+                            <option>Frühling</option>
+                            <option>Sommer</option>
+                            <option>Herbst</option>
+                            <option>Winter</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;width:100px">
+                        <label class="form-label">Jahr</label>
+                        <input type="number" id="upload-jahr" class="form-input" placeholder="2026" min="2000" max="2030">
+                    </div>
+                </div>
+                <div id="upload-area" class="upload-area">
+                    <input type="file" id="upload-input" accept=".pdf">
+                    <div style="font-size:2rem;margin-bottom:0.5rem">📄</div>
+                    <div style="font-weight:600;margin-bottom:0.25rem">PDF hierher ziehen oder klicken</div>
+                    <div style="font-size:0.85rem;color:var(--clr-ink-muted)">Nur .pdf-Dateien</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Issues Table -->
+        <div class="admin-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Erfasste Ausgaben</div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="issue-table">
+                        <thead>
+                            <tr>
+                                <th>Titel</th>
+                                <th>Gemeinde</th>
+                                <th>Zeitraum</th>
+                                <th>Status</th>
+                                <th>Artikel</th>
+                                <th>Datum</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="issues-tbody">
+                            <tr><td colspan="7" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Management -->
+        <div class="admin-section">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Erkannte Artikel</div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="issue-table">
+                        <thead>
+                            <tr>
+                                <th>Titel</th>
+                                <th>Gemeinde</th>
+                                <th>Kategorien</th>
+                                <th>Typ</th>
+                                <th>Status</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="articles-admin-tbody">
+                            <tr><td colspan="6" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="admin-section">
+            <div class="card">
+                <div class="card-title">Verarbeitungs-Log</div>
+                <div id="log-list" class="log-list" style="margin-top:0.75rem">
+                    <div style="padding:1rem;text-align:center"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Artikel bearbeiten</h2>
+                <button class="modal-close">×</button>
+            </div>
+            <form id="edit-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label class="form-label">Titel</label>
+                    <input type="text" id="edit-title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Zusammenfassung</label>
+                    <textarea id="edit-summary" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <div class="form-group" style="flex:1;min-width:140px">
+                        <label class="form-label">Gemeinde</label>
+                        <select id="edit-gemeinde" class="form-select">
+                            <option value="">–</option>
+                            <option>Westoverledingen</option>
+                            <option>Rhauderfehn / Ostrhauderfehn</option>
+                            <option>Saterland</option>
+                            <option>Barßel</option>
+                            <option>Apen / Augustfehn</option>
+                            <option>Stadt Leer</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;min-width:120px">
+                        <label class="form-label">Saison</label>
+                        <select id="edit-saison" class="form-select">
+                            <option value="">–</option>
+                            <option>Frühling</option>
+                            <option>Sommer</option>
+                            <option>Herbst</option>
+                            <option>Winter</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="width:100px">
+                        <label class="form-label">Jahr</label>
+                        <input type="number" id="edit-jahr" class="form-input" min="2000" max="2030">
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <div class="form-group" style="flex:1">
+                        <label class="form-label">Inhaltstyp</label>
+                        <select id="edit-type" class="form-select">
+                            <option value="redaktionell">Redaktionell</option>
+                            <option value="anzeige">Anzeige</option>
+                            <option value="advertorial">Advertorial / PR</option>
+                            <option value="veranstaltungshinweis">Veranstaltungshinweis</option>
+                            <option value="leseraktion">Leseraktion</option>
+                            <option value="unklar">Unklar</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1">
+                        <label class="form-label">Status</label>
+                        <select id="edit-status" class="form-select">
+                            <option value="automatisch erkannt">Automatisch erkannt</option>
+                            <option value="manuell geprüft">Manuell geprüft</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Schlagwörter (kommagetrennt)</label>
+                    <input type="text" id="edit-keywords" class="form-input" placeholder="z.B. Feuerwehr, Jubiläum, Verein">
+                </div>
+                <div style="display:flex;gap:0.75rem;justify-content:flex-end;margin-top:1.25rem">
+                    <button type="button" class="btn btn-secondary" onclick="document.querySelector('#edit-modal').classList.remove('active')">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">💾 Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        BlickPUNKT Archiv · Nur für interne redaktionelle Nutzung
+    </footer>
+
+    <script src="/static/app.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', initAdmin);</script>
+</body>
+</html>

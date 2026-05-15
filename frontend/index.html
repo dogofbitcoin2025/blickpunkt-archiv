@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlickPUNKT Archiv – Artikelsuche</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>📰</text></svg>">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <a href="/" class="logo">
+                Blick<span class="accent">PUNKT</span>
+                <span class="logo-sub">Redaktions-Archiv</span>
+            </a>
+            <button class="mobile-menu-btn" aria-label="Menü">☰</button>
+            <nav>
+                <a href="/" class="active">Suche</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/admin">Admin</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-wrap">
+        <h1 class="page-title">Artikelarchiv durchsuchen</h1>
+        <p class="page-subtitle">Finde Artikel aus allen BlickPUNKT-Ausgaben nach Thema, Gemeinde, Kategorie und mehr.</p>
+
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Volltextsuche – z.B. Feuerwehr, Leserfrühstück, Sportverein…" autofocus>
+        </div>
+
+        <div class="filter-bar">
+            <div class="form-group">
+                <label class="form-label">Kategorie</label>
+                <select id="filter-kategorie" class="form-select">
+                    <option value="">Alle Kategorien</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Gemeinde</label>
+                <select id="filter-gemeinde" class="form-select">
+                    <option value="">Alle Gemeinden</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Jahr</label>
+                <select id="filter-jahr" class="form-select">
+                    <option value="">Alle Jahre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Saison</label>
+                <select id="filter-saison" class="form-select">
+                    <option value="">Alle Saisons</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Inhaltstyp</label>
+                <select id="filter-type" class="form-select">
+                    <option value="">Alle Typen</option>
+                    <option value="redaktionell">Redaktionell</option>
+                    <option value="anzeige">Anzeige</option>
+                    <option value="advertorial">Advertorial / PR</option>
+                    <option value="veranstaltungshinweis">Veranstaltungshinweis</option>
+                    <option value="leseraktion">Leseraktion</option>
+                    <option value="unklar">Unklar</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="filter-bar" style="margin-top:0;padding-top:0">
+            <label class="checkbox-label" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.9rem">
+                <input type="checkbox" id="exclude-ads" checked>
+                Anzeigen ausblenden (nur redaktionelle Inhalte für Ideenprüfung)
+            </label>
+        </div>
+
+        <div class="results-header">
+            <span id="results-count" class="results-count">Lade Artikel…</span>
+            <div style="display:flex;gap:0.5rem">
+                <button id="export-csv" class="btn btn-sm btn-secondary">📥 CSV</button>
+                <button id="export-json" class="btn btn-sm btn-secondary">📥 JSON</button>
+                <button id="export-excel" class="btn btn-sm btn-secondary">📥 Excel</button>
+            </div>
+        </div>
+
+        <div id="article-list" class="article-list">
+            <div style="padding:2rem;text-align:center"><div class="spinner"></div></div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        BlickPUNKT Archiv · Nur für interne redaktionelle Nutzung
+    </footer>
+
+    <script src="/static/app.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', initSearchPage);</script>
+</body>
+</html>

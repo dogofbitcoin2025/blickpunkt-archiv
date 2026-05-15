@@ -1,0 +1,27 @@
+# Lokale Daten
+data/pdfs/
+data/text/
+data/previews/
+data/archive.db
+exports/
+
+# Secrets
+.env
+web/.env.local
+web/.env.local.*
+web/.env.*.local
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Node / Next.js
+web/node_modules/
+web/.next/
+web/out/
+
+# macOS
+.DS_Store
+**/.DS_Store
